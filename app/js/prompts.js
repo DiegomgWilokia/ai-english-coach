@@ -573,8 +573,11 @@ ${recipe.map(([t, n]) => `${n} x ${t}`).join(', ')}
 Rules:
 - Level ${level} language only; sentences natural and useful, many tied to the student's goal.
 - Each exercise solvable in under 40 seconds.
-- "explain": Spanish, max 25 words, says WHY (mention the typical Spanish-speaker mistake when relevant).
-- "accept": list every other correct answer (contractions, synonyms, valid word orders). Missing alternatives make correct students fail.
+- "explain": Spanish, ONE short sentence (max 15 words) saying WHY the answer is right — the student reads it after a mistake.
+- Answers are checked by exact comparison, with no AI: every exercise must have ONE clearly correct answer.
+  Choose Spanish sentences whose English translation is unambiguous (avoid synonyms and free word order).
+- "accept": list EVERY other correct answer (contracted/full forms, valid word orders, common synonyms), up to 8.
+  A missing alternative makes a correct student fail.
 - Multiple choice: exactly one correct option, distractors = typical learner errors.
 - ${variant} spelling and vocabulary.
 - Add "topic" (2-4 words, English) to each exercise naming the grammar/vocab point it tests.
@@ -583,20 +586,6 @@ Item shapes:
 ${recipe.map(([t]) => `- ${ITEM_SCHEMAS[t]}`).join('\n')}
 
 Return ONLY JSON: {"title":"lesson title in Spanish (max 6 words)","items":[ ... ]}`;
-}
-
-export function buildOpenCheckPrompt(user, item, answer) {
-  const task = item.type === 'transform'
-    ? `Key word transformation. Original: "${item.prompt}". Must use the word "${item.keyword}" unchanged. Gapped sentence: "${item.start}".`
-    : item.type === 'cloze' ? `Fill the gap: "${item.prompt}"${item.hint ? ` (clue: ${item.hint})` : ''}.`
-    : `Translate into English: "${item.es}".`;
-  return `Judge one answer from a ${user.current_level} English learner (${variantOf(user)} English).
-Task: ${task}
-Reference answer: "${item.answer}". Other accepted: ${JSON.stringify(item.accept || [])}.
-Student answer: "${answer}".
-
-Correct = same meaning, grammatical, natural, and uses the target structure when the task requires it. Ignore capitals, final punctuation and one-letter typos.
-Return ONLY JSON: {"correct": true|false, "feedback": "Spanish, max 20 words: why it is right/wrong", "better": "the closest correct version of the student's answer"}`;
 }
 
 export function buildSpeechPrompt(user, item) {

@@ -20,11 +20,14 @@ protocol.registerSchemesAsPrivileged([{
 app.setAppUserModelId('com.aienglishcoach.desktop'); // same id as the installer shortcut, needed for toasts
 Menu.setApplicationMenu(null);
 
-const smokeLog = { externalOpened: [], failedRequests: [], consoleErrors: [], consoleWarnings: [] };
-if (SMOKE) app.setPath('userData', path.join(os.tmpdir(), 'aec-desktop-smoke')); // never touch the real profile
+const smokeLog = { externalOpened: [], failedRequests: [], consoleErrors: [], consoleWarnings: [], defaultUserData: app.getPath('userData') };
+// Smoke never touches the real profile, except --smoke-real-profile (upgrade tests with a throwaway app identity).
+if (SMOKE && !process.argv.includes('--smoke-real-profile')) app.setPath('userData', path.join(os.tmpdir(), 'aec-desktop-smoke'));
 else if (!app.requestSingleInstanceLock()) app.quit();
 
 let win = null;
+let updater = null;
+let updateState = null; // { status: 'available' | 'downloaded', version }
 
 function openExternal(url) {
   let u;
@@ -32,6 +35,33 @@ function openExternal(url) {
   if (u.protocol !== 'https:') return;
   if (SMOKE) smokeLog.externalOpened.push(u.href); // record instead of launching the browser
   else shell.openExternal(u.href);
+}
+
+// Auto-update from GitHub releases (publish config in package.json). Errors are only logged, never shown.
+function startUpdater() {
+  const { autoUpdater } = require('electron-updater');
+  const logFile = path.join(app.getPath('logs'), 'updater.log');
+  fs.mkdirSync(path.dirname(logFile), { recursive: true });
+  try { if (fs.statSync(logFile).size > 1e6) fs.renameSync(logFile, logFile + '.old'); } catch {}
+  const log = (...a) => fs.appendFile(logFile, `${new Date().toISOString()} ${a.map(x => (x && x.stack) || String(x)).join(' ')}
+`, () => {});
+  autoUpdater.logger = { info: log, warn: log, error: log, debug: () => {} };
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.disableDifferentialDownload = true; // no blockmaps are published: always a full download
+  autoUpdater.disableWebInstaller = true;
+  const tell = status => info => {
+    updateState = { status, version: info.version };
+    if (win && !win.isDestroyed()) win.webContents.send('update', updateState);
+  };
+  autoUpdater.on('update-available', tell('available'));
+  autoUpdater.on('update-downloaded', tell('downloaded'));
+  autoUpdater.on('error', e => log('error', e));
+  // rejections are already reported through the 'error' event
+  const check = () => { if (!updateState || updateState.status !== 'downloaded') autoUpdater.checkForUpdates().catch(() => {}); };
+  check();
+  setInterval(check, 6 * 60 * 60 * 1000);
+  return autoUpdater;
 }
 
 async function serve(req) {
@@ -114,9 +144,17 @@ app.whenReady().then(() => {
   ipcMain.handle('tts:voices', guard(tts.voices));
   ipcMain.handle('tts:speak', guard(tts.speak));
   ipcMain.handle('tts:stop', guard(tts.stop));
+  ipcMain.handle('app:version', guard(() => app.getVersion()));
+  ipcMain.handle('update:state', guard(() => updateState));
+  ipcMain.handle('update:install', guard(() => {
+    if (!updater || !updateState || updateState.status !== 'downloaded') return false;
+    setImmediate(() => updater.quitAndInstall(true, true)); // silent install, then relaunch
+    return true;
+  }));
   tts.start(); // warm up PowerShell + System.Speech (~1 s) before the first speak
 
   createWindow();
+  if (app.isPackaged && !SMOKE) updater = startUpdater();
 });
 
 app.on('window-all-closed', () => app.quit());
@@ -148,6 +186,7 @@ const SMOKE_PROBE = `(async () => {
   r.micAudio = await gum({ audio: true });
   r.micVideo = await gum({ video: true });
   if (window.aecDesktop) {
+    r.desktopApi = { version: await aecDesktop.version(), installUpdate: await aecDesktop.installUpdate(), onUpdate: typeof aecDesktop.onUpdate };
     const t = r.tts = {};
     t.voices = await aecDesktop.voices();
     let t0 = performance.now();
@@ -187,7 +226,7 @@ async function runSmoke() {
     report = { fatal: String(e && e.stack || e) };
   }
   if (report.tts) Object.assign(report.tts, tts.info(), { sapiRate: { '0.6': tts.sapiRate(0.6), '0.7': tts.sapiRate(0.7), '1': tts.sapiRate(1), '1.2': tts.sapiRate(1.2), '5': tts.sapiRate(5) } });
-  Object.assign(report, smokeLog, { electron: process.versions.electron, chrome: process.versions.chrome, packaged: app.isPackaged });
+  Object.assign(report, smokeLog, { version: app.getVersion(), userData: app.getPath('userData'), electron: process.versions.electron, chrome: process.versions.chrome, packaged: app.isPackaged });
   const fails = [];
   if (report.fatal) fails.push('fatal');
   if (!(report.viewChildren > 0)) fails.push('ui.js did not render #view');
@@ -201,6 +240,8 @@ async function runSmoke() {
   if (JSON.stringify(report.externalOpened) !== JSON.stringify(expectedExternal)) fails.push('external link policy');
   if (report.urlAfterNavigationAttempt && !report.urlAfterNavigationAttempt.startsWith(ORIGIN + '/')) fails.push('window navigated away');
   if (!(report.screenshotBytes > 10000)) fails.push('screenshot empty');
+  const api = report.desktopApi;
+  if (!api || api.version !== app.getVersion() || api.installUpdate !== false || api.onUpdate !== 'function') fails.push('desktop update/version API');
   const t = report.tts;
   if (!t) fails.push('window.aecDesktop missing');
   else if (t.voices.length) {

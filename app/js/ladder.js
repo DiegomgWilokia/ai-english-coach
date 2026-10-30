@@ -5,14 +5,27 @@
  * rests the delay Google asks for; when the whole ladder is resting the user is
  * told plainly instead of quietly getting worse answers.
  */
+/* text: everyday calls (lessons, speech, chat) — the light models go first: they
+ * answer in ~1-2 s and their free daily quota is the largest. The big models are
+ * only the last resort. smart: rare, high-stakes calls (placement, promotion exam,
+ * writing and conversation grading) — big model first. Cooldowns are per model,
+ * shared by both lists. */
 export const LADDERS = {
   text: [
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.5-flash',
+    'gemini-2.5-flash',
+  ],
+  smart: [
     'gemini-3.7-flash',
     'gemini-3.6-flash',
     'gemini-3.5-flash',
+    'gemini-2.5-flash',
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite',
-    'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
   ],
   tts: [

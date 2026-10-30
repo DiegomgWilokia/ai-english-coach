@@ -46,6 +46,7 @@ const geminiText = text => ({ candidates: [{ content: { parts: [{ text }] } }] }
 const silence = Buffer.alloc(24000 * 2 * 0.3).toString('base64');     // 0.3 s of 24 kHz PCM
 
 let lessonsServed = 0, coachCalls = 0, judgeCalls = 0;
+const lessonCalls = [];
 function fakeGemini(url, method, postData) {
   if (method === 'OPTIONS') return { status: 204, body: '' };
   if (url.includes('/models?')) return { status: 200, body: JSON.stringify({ models: [{ name: 'models/fake' }] }) };
@@ -55,7 +56,7 @@ function fakeGemini(url, method, postData) {
   }
   const text = JSON.stringify(body.contents || '');
   const system = JSON.stringify(body.systemInstruction || '');
-  if (text.includes('writing ONE micro-lesson')) { lessonsServed++; return { status: 200, body: JSON.stringify(geminiText(JSON.stringify(LESSON))) }; }
+  if (text.includes('writing ONE micro-lesson')) { lessonsServed++; lessonCalls.push({ model: url.match(/models\/([^:]+):/)?.[1], thinking: body.generationConfig?.thinkingConfig }); return { status: 200, body: JSON.stringify(geminiText(JSON.stringify(LESSON))) }; }
   if (text.includes('Judge one answer')) { judgeCalls++; return { status: 200, body: JSON.stringify(geminiText('{"correct":false,"feedback":"Falta el present perfect.","better":"We have worked here since 2020"}')) }; }
   if (system.includes('Coach')) { coachCalls++; return { status: 200, body: JSON.stringify(geminiText('**Present perfect** = experiencias sin fecha.\n- I have been to Rome.\n- I have never seen snow.')) }; }
   return { status: 200, body: JSON.stringify(geminiText('{}')) };
@@ -192,7 +193,7 @@ try {
   await screenshot('lesson-teach');
   await click('[data-act="q-next"]');
 
-  let missed = false, steps = 0, sawBad = false, sawGood = false;
+  let missed = false, steps = 0, sawBad = false, sawGood = false, sawOverride = false;
   while (steps++ < 30) {
     await sleep(120);
     if (await evaluate(`!!document.querySelector('.end')`)) break;
@@ -231,11 +232,12 @@ try {
     await waitFor(`!document.getElementById('sheet')?.hidden`, `feedback sheet for ${kind}`, 6000);
     const good = await evaluate(`document.getElementById('sheet').classList.contains('good')`);
     if (good && !sawGood) { sawGood = true; await screenshot('lesson-correct'); }
-    if (!good && !sawBad) { sawBad = true; await screenshot('lesson-wrong'); }
+    if (!good && !sawBad) { sawBad = true; sawOverride = await evaluate(`!!document.querySelector('[data-act="q-override"]')`); await screenshot('lesson-wrong'); }
     await click('#next-btn');
   }
   expect(sawGood && sawBad, 'feedback sheets for right and wrong answers');
-  expect(judgeCalls === 1, `a rejected open answer is double-checked by the AI once (got ${judgeCalls})`);
+  expect(judgeCalls === 0, `answers are checked locally, never by the AI (AI checks: ${judgeCalls})`);
+  expect(sawOverride, 'a missed free answer offers "my answer was correct"');
   await waitFor(`!!document.querySelector('.end')`, 'end screen');
   await sleep(1300);
   const endText = await evaluate(`document.querySelector('.end').innerText`);
@@ -289,6 +291,8 @@ try {
   await waitFor(`!!document.querySelector('.rank-big')`, 'desktop progress');
   await screenshot('progress-desktop');
   expect(lessonsServed >= 1, `lessons generated: ${lessonsServed} (1 + prefetch of the next)`);
+  expect(lessonCalls[0]?.model === 'gemini-3.5-flash-lite' && lessonCalls[0]?.thinking?.thinkingLevel === 'LOW',
+    `lessons use the light model with minimal reasoning (${JSON.stringify(lessonCalls[0])})`);
 } catch (err) {
   failures.push(err.message);
   console.error(err);

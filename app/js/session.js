@@ -11,7 +11,6 @@ import * as P from './path.js';
 import { cleanItems, gradable } from './items.js';
 import { matchAnswer, OPEN_TYPES, shuffle } from './check.js';
 import { findUnit, levelOfUnit, ROUNDS } from './syllabus.js';
-import { QuotaExhausted } from './ladder.js';
 
 export const KIND_WEIGHT = { learn: 0.3, words: 0.3, listen: 0.3, speak: 0.3, practice: 0.35, check: 0.8 };
 export const PASS = { lesson: 50, check: 80 };
@@ -136,9 +135,9 @@ export function startReview(max = 20) {
 // ---------------------------------------------------------------------------
 const sentenceKind = item => (/\s/.test(String(item.answer || '').trim()) ? 'sentence' : 'word');
 
-/* Returns {ok, typo, expected, explain, feedback?, better?, aiFailed?}. */
-export async function checkAnswer(item, given) {
-  const base = { expected: item.answer, explain: item.explain || '' };
+/* Instant and local: right or wrong, no AI round trip. Returns {ok, typo, expected, explain, open}. */
+export function checkAnswer(item, given) {
+  const base = { expected: item.answer, explain: item.explain || '', open: OPEN_TYPES.has(item.type) };
   switch (item.type) {
     case 'choice':
     case 'listen':
@@ -150,16 +149,7 @@ export async function checkAnswer(item, given) {
     default: {
       const kind = ['order', 'translate', 'transform'].includes(item.type) ? 'sentence' : sentenceKind(item);
       const m = matchAnswer(given, item.accept?.length ? item.accept : [item.answer], kind);
-      if (m.ok || !OPEN_TYPES.has(item.type) || item.noAI || !String(given).trim()) {
-        return { ...base, ok: m.ok, typo: m.typo };
-      }
-      try {
-        const ai = await G.checkOpenAnswer(C.userForPrompt(), item, given);
-        return { ...base, ok: ai.correct, typo: false, feedback: ai.feedback, better: ai.better, ai: true };
-      } catch (err) {
-        console.warn('open check', err);
-        return { ...base, ok: false, typo: false, aiFailed: true, quota: err instanceof QuotaExhausted };
-      }
+      return { ...base, ok: m.ok, typo: m.typo };
     }
   }
 }

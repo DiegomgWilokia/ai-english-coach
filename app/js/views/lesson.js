@@ -221,17 +221,11 @@ function drawTiles() {
 // ---------------------------------------------------------------------------
 // Checking + feedback sheet
 // ---------------------------------------------------------------------------
-async function doCheck() {
+function doCheck() {
   if (ui.result || ui.checking) return;
-  const it = S.currentItem(ses);
   const given = ui.answer;
   if (!String(given).trim()) return;
-  ui.checking = true;
-  const btn = $('#check-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="dots"><i></i><i></i><i></i></span> ${t('q_checking')}`; }
-  const res = await S.checkAnswer(it, given);
-  ui.checking = false;
-  showResult(res, given);
+  showResult(S.checkAnswer(S.currentItem(ses), given), given);
 }
 
 function showResult(res, given) {
@@ -253,16 +247,14 @@ function showResult(res, given) {
 
   const praise = res.typo ? t('q_typo') : pickPraise(rec);
   const expected = res.expected && !res.ok ? `<p class="sheet-ans"><span>${t('ex_expected')}:</span> <b>${esc(res.expected)}</b></p>` : '';
-  const better = res.better && !res.ok && res.better.trim().toLowerCase() !== String(res.expected || '').trim().toLowerCase() ? `<p class="sheet-ans"><span>${t('q_better')}:</span> <b>${esc(res.better)}</b></p>` : '';
-  const why = res.feedback || res.explain;
-  const override = res.aiFailed ? `<button class="link-btn" data-act="q-override">${t('q_override')}</button>` : '';
+  const why = res.explain;
+  const override = !res.ok && res.open ? `<button class="link-btn" data-act="q-override">${t('q_override')}</button>` : '';
   sheet(res.ok, `
     <div class="sheet-head"><span class="sheet-ico">${res.ok ? '✓' : '✕'}</span><b>${res.ok ? praise : t('q_wrong')}</b>
       ${rec.milestone ? `<span class="pill pill-xp">🔥 ${t('q_combo', { n: ses.combo })}</span>` : ''}</div>
     ${res.typo ? `<p class="sheet-ans"><span>${t('q_correct_is')}:</span> <b>${esc(res.expected)}</b></p>` : ''}
-    ${expected}${better}
+    ${expected}
     ${why ? `<p class="sheet-why">${esc(why)}</p>` : ''}
-    ${res.aiFailed ? `<p class="sheet-why">${t(res.quota ? 'q_ai_quota' : 'q_ai_down')}</p>` : ''}
     <div class="sheet-actions">${override}
       ${!res.ok ? `<button class="link-btn" data-act="q-why">${t('q_ask_why')}</button>` : ''}
       <button class="btn btn-3d ${res.ok ? 'btn-good' : 'btn-bad'} btn-lg" data-act="q-next" id="next-btn">${t('q_continue')}</button>
@@ -472,7 +464,7 @@ Object.assign(actions, {
     next();
   },
   'q-override': () => {
-    // Gemini was unreachable and the local list missed a valid answer: trust the student.
+    // The accept list missed a valid free answer: trust the student (no AI call).
     const idx = ses.queue[ses.pos];
     const r = ses.results[idx];
     if (r && r.attempts === 1) { r.firstTry = true; r.solved = true; ses.combo += 1; ses.xp += gm.XP.item; }

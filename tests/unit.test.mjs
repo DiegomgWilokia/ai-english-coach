@@ -19,6 +19,7 @@ const store = await import('../app/js/store.js');
 const S = await import('../app/js/session.js');
 const P = await import('../app/js/path.js');
 const { SYLLABUS, NODES } = await import('../app/js/syllabus.js');
+const { compareVersions } = await import('../app/js/update.js');
 
 test('answers: case, punctuation and contractions do not matter', () => {
   assert.equal(check.matchAnswer('i have been there', ["I've been there."], 'sentence').ok, true);
@@ -193,4 +194,23 @@ test('quests: three a day, the XP quest pays a bonus once', () => {
   assert.equal(first.quests.length, 1);
   assert.equal(first.bonus, gm.XP.quest);
   assert.equal(gm.earn(10).quests.length, 0);
+});
+
+test('checking is instant and local: right, wrong, alternatives, and free answers can be overridden', () => {
+  const tr = { type: 'translate', es: 'He vivido en Londres dos años', answer: 'I have lived in London for two years', accept: ["I've lived in London for two years"] };
+  assert.equal(S.checkAnswer(tr, "i've lived in london for two years").ok, true);
+  const bad = S.checkAnswer(tr, 'I had live in London for two years');
+  assert.equal(bad.ok, false);
+  assert.equal(bad.open, true, 'free answer: the student may override');
+  assert.equal(bad.expected, tr.answer);
+  const ch = { type: 'choice', prompt: 'I ___ there', options: ['go', 'went'], answer: 'went', explain: 'Pasado.' };
+  assert.equal(S.checkAnswer(ch, 'go').ok, false);
+  assert.equal(S.checkAnswer(ch, 'go').open, false, 'multiple choice is plainly right or wrong');
+  assert.equal(S.checkAnswer(ch, 'go') instanceof Promise, false, 'no async round trip');
+});
+
+test('versions compare numerically', () => {
+  assert.equal(compareVersions('v2.10.0', '2.9.1'), 1);
+  assert.equal(compareVersions('2.1.0', '2.1.0'), 0);
+  assert.equal(compareVersions('2.0.9', 'v2.1.0'), -1);
 });

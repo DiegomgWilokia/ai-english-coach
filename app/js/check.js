@@ -108,6 +108,6 @@ export function seeded(seedStr) {
   };
 }
 
-/* Which item types need Gemini to judge an answer the local check rejected:
- * open production can be right in ways no accept list predicts. */
-export const OPEN_TYPES = new Set(['translate', 'order', 'transform', 'cloze']);
+/* Free-production types: a right answer can be missing from the accept list, so
+ * a miss offers "my answer was correct" (instant, no AI call). */
+export const OPEN_TYPES = new Set(['translate', 'order', 'transform', 'cloze', 'dictation']);

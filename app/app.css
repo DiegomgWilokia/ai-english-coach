@@ -850,3 +850,9 @@ textarea.q-input { min-height: 96px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* Update banner */
+.update-banner { position: fixed; z-index: 97; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top));
+  width: min(560px, calc(100% - 24px)); display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 16px; border-radius: 16px;
+  background: var(--panel-solid); border: 1px solid rgba(124,92,255,.55); box-shadow: var(--shadow); font-size: 14px; animation: rise .3s both; }
+.update-banner span { flex: 1; line-height: 1.4; }

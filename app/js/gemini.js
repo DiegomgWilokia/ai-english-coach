@@ -51,7 +51,25 @@ class ApiError extends Error {
   }
 }
 
-async function generateContent(model, body, timeoutMs = 90000) {
+/* Reasoning kept to the minimum: without this a Gemini 3.x model "thinks" for
+ * ~18 s before a short answer and burns quota doing it. 3.x rejects
+ * thinkingBudget:0 (400), so it gets thinkingLevel LOW; 2.5 gets budget 0. */
+function thinkingFor(model) {
+  if (/^gemini-2\.5-flash/.test(model)) return { thinkingBudget: 0 };
+  if (/^gemini-3/.test(model)) return { thinkingLevel: 'LOW' };
+  return null;
+}
+
+async function generateContent(model, body, timeoutMs = 90000, { thinking = false } = {}) {
+  const think = thinking ? thinkingFor(model) : null;
+  if (think) {
+    try {
+      return await generateContent(model, { ...body, generationConfig: { ...body.generationConfig, thinkingConfig: think } }, timeoutMs);
+    } catch (err) {
+      // a model that does not accept the setting answers 400 at once: retry without it
+      if (!(err.status === 400 && /thinking/i.test(String(err.body)))) throw err;
+    }
+  }
   const key = apiKey();
   if (!key) throw new Error('Falta la API key de Gemini.');
   const ctrl = new AbortController();
@@ -77,8 +95,8 @@ function partsText(data) {
 }
 
 /* Generic call: contents/system/json/temperature, on the best model in quota. */
-async function callRaw({ contents, system = P.SYSTEM_PERSONALITY, json = true, temperature, timeoutMs }) {
-  return L.call('text', async model => {
+async function callRaw({ contents, system = P.SYSTEM_PERSONALITY, json = true, temperature, timeoutMs, kind = 'text' }) {
+  return L.call(kind, async model => {
     const data = await generateContent(model, {
       contents,
       systemInstruction: { parts: [{ text: system }] },
@@ -86,24 +104,15 @@ async function callRaw({ contents, system = P.SYSTEM_PERSONALITY, json = true, t
         temperature: temperature ?? (json ? 0.6 : 0.8),
         ...(json ? { responseMimeType: 'application/json' } : {}),
       },
-    }, timeoutMs);
+    }, timeoutMs, { thinking: true });
     return partsText(data);
   });
 }
 
-/* Call Gemini on the best model still in quota. Throws QuotaExhausted when none is. */
-export async function callModel(prompt, jsonMode = true) {
-  return L.call('text', async model => {
-    const data = await generateContent(model, {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      systemInstruction: { parts: [{ text: P.SYSTEM_PERSONALITY }] },
-      generationConfig: {
-        temperature: jsonMode ? 0.6 : 0.8,
-        ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
-      },
-    });
-    return partsText(data);
-  });
+/* Call Gemini on the best model still in quota. Throws QuotaExhausted when none is.
+ * kind 'smart' = big model first, for the rare calls where quality decides a level. */
+export async function callModel(prompt, jsonMode = true, kind = 'text') {
+  return callRaw({ contents: [{ role: 'user', parts: [{ text: prompt }] }], json: jsonMode, kind });
 }
 
 /* Best-effort JSON parsing — tolerates code fences and stray prose. */
@@ -178,7 +187,7 @@ export async function gradeExercises(user, exercise, answers) {
 }
 
 export async function gradeWriting(user, prompt, text) {
-  const raw = await callModel(P.buildWritingGradePrompt(user, prompt, text));
+  const raw = await callModel(P.buildWritingGradePrompt(user, prompt, text), true, 'smart');
   const data = safeJson(raw, null);
   if (!data) throw new Error('No se pudo leer la corrección. Vuelve a intentarlo.');
   return data;
@@ -197,7 +206,7 @@ const EVAL_FALLBACK = {
 };
 
 export async function evaluateConversation(user, messages, role) {
-  const data = safeJson(await callModel(P.buildConversationEvalPrompt(user, messages, role)), null);
+  const data = safeJson(await callModel(P.buildConversationEvalPrompt(user, messages, role), true, 'smart'), null);
   if (!data || typeof data !== 'object') return { ...EVAL_FALLBACK };
   const out = { ...EVAL_FALLBACK, ...data };
   const criteria = ['fluency', 'grammar', 'vocabulary', 'naturalness', 'comprehension'];
@@ -233,7 +242,7 @@ export async function generateLesson(user, topic, recentMistakes) {
 }
 
 export async function generatePlacement(user) {
-  const data = safeJson(await callModel(P.buildPlacementTestPrompt(user)), null);
+  const data = safeJson(await callModel(P.buildPlacementTestPrompt(user), true, 'smart'), null);
   if (!data || !Array.isArray(data.items) || !data.reading || !data.writing_prompt) {
     throw new Error('Could not build the test. Try again.');
   }
@@ -243,13 +252,13 @@ export async function generatePlacement(user) {
 }
 
 export async function evaluatePlacement(user, test, answers, writingText) {
-  const data = safeJson(await callModel(P.buildPlacementEvalPrompt(user, test, answers, writingText)), null);
+  const data = safeJson(await callModel(P.buildPlacementEvalPrompt(user, test, answers, writingText), true, 'smart'), null);
   if (!data || !data.level) throw new Error('Could not evaluate the test. Try again.');
   return data;
 }
 
 export async function generateCertExam(user, level) {
-  const data = safeJson(await callModel(P.buildCertExamPrompt(user, level)), null);
+  const data = safeJson(await callModel(P.buildCertExamPrompt(user, level), true, 'smart'), null);
   if (!data || !Array.isArray(data.items) || !data.reading || !data.writing_prompt) {
     throw new Error('Could not build the exam. Try again.');
   }
@@ -259,7 +268,7 @@ export async function generateCertExam(user, level) {
 }
 
 export async function evaluateCertExam(user, level, test, answers, writingText) {
-  const data = safeJson(await callModel(P.buildCertEvalPrompt(user, level, test, answers, writingText)), null);
+  const data = safeJson(await callModel(P.buildCertEvalPrompt(user, level, test, answers, writingText), true, 'smart'), null);
   if (!data || typeof data.score !== 'number') throw new Error('Could not grade the exam. Try again.');
   data.score = Math.max(0, Math.min(100, data.score));
   return data;
@@ -369,17 +378,6 @@ export async function generateMicroLesson(user, unit, kind, round, level, recent
   const items = Array.isArray(data) ? data : data?.items;
   if (!Array.isArray(items)) throw new Error('Gemini devolvió una lección que no se pudo leer. Vuelve a intentarlo.');
   return { title: typeof data?.title === 'string' ? data.title.slice(0, 80) : '', items };
-}
-
-export async function checkOpenAnswer(user, item, answer) {
-  const raw = await callRaw({
-    contents: [{ role: 'user', parts: [{ text: P.buildOpenCheckPrompt(user, item, answer) }] }],
-    temperature: 0.1,
-    timeoutMs: 30000,
-  });
-  const data = safeJson(raw, null);
-  if (!data || typeof data.correct !== 'boolean') throw new Error('No se pudo comprobar la respuesta.');
-  return { correct: data.correct, feedback: String(data.feedback || ''), better: String(data.better || '') };
 }
 
 export async function checkSpeech(user, item, wavBase64) {

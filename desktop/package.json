@@ -47,8 +47,20 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "AI English Coach",
-      "artifactName": "AI-English-Coach-Setup.${ext}",
-      "differentialPackage": false
-    }
+      "artifactName": "AI-English-Coach.${ext}",
+      "differentialPackage": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "DiegomgWilokia",
+        "repo": "ai-english-coach",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
   }
 }

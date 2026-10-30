@@ -8,6 +8,7 @@ import { toggleReminders, setReminderHour } from '../notify.js';
 import { t, setLang, goalLabel, goalIcon, GOAL_LABELS } from '../i18n.js';
 import { $, view, esc, routes, actions, go, toast, refresh, rankSVG, rankName } from '../dom.js';
 import { pickPhoto, HOURS, langToggle } from './start.js';
+import { APP_VERSION } from '../version.js';
 
 routes['/profile'] = () => {
   const s = store.load();
@@ -84,7 +85,8 @@ routes['/profile'] = () => {
       <a class="btn btn-ghost btn-block" href="#/setup">${t('pf_key_change')}</a>
     </div>
 
-    <button class="btn btn-danger btn-block" style="margin:16px 0 8px" data-act="reset">🗑️ ${t('pf_reset')}</button>`;
+    <button class="btn btn-danger btn-block" style="margin:16px 0 8px" data-act="reset">🗑️ ${t('pf_reset')}</button>
+    <p class="muted center" style="font-size:12px;margin:10px 0 24px">AI English Coach ${APP_VERSION}</p>`;
 };
 
 function saveProfile() {

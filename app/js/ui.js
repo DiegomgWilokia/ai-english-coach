@@ -9,6 +9,7 @@ import { t } from './i18n.js';
 import { $, view, esc, routes, actions, setRerender, closeModal, rankSVG, rankName, ring } from './dom.js';
 import { divisionOf } from './gamify.js';
 import { langToggle } from './views/start.js';
+import { initUpdates, updateActions } from './update.js';
 import './views/path.js';
 import './views/lesson.js';
 import './views/practice.js';
@@ -100,6 +101,8 @@ window.addEventListener('hashchange', route);
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor && location.hostname !== 'localhost') {
   navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW', err));
 }
+Object.assign(actions, updateActions);
 if (store.load().user) C.touchLogin();
 initReminders();
 route();
+initUpdates();

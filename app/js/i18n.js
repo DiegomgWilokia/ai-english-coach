@@ -336,6 +336,8 @@ Object.assign(EN, {
   dip_view: 'View', pf_sound: 'Sounds', pf_sound_sub: 'Effects for right/wrong answers and combos.',
   pf_goal_xp: 'daily goal {n} XP', pf_level_confirm: 'Change your level manually? Your LP restart at 0.',
   ob_zero: 'I’m starting from zero',
+  upd_ready: 'Version {v} is ready. It installs when you close the app — your progress stays.', upd_restart: 'Restart now',
+  upd_apk: 'Version {v} is available. Install it over this one — your progress stays.', upd_download: 'Download',
 });
 
 Object.assign(ES, {
@@ -412,6 +414,8 @@ Object.assign(ES, {
   dip_view: 'Ver', pf_sound: 'Sonidos', pf_sound_sub: 'Efectos de acierto, fallo y combos.',
   pf_goal_xp: 'meta diaria {n} XP', pf_level_confirm: '¿Cambiar tu nivel a mano? Tus LP vuelven a 0.',
   ob_zero: 'Empiezo desde cero',
+  upd_ready: 'La versión {v} está lista. Se instala al cerrar la app — tu progreso se queda.', upd_restart: 'Reiniciar ahora',
+  upd_apk: 'Hay una versión nueva ({v}). Instálala encima de esta — tu progreso se queda.', upd_download: 'Descargar',
   wel_tag: 'Tu profe de inglés con IA',
   wel_sub: 'Lecciones de 7 minutos que siguen el temario de Cambridge, corrección al instante, conversación por voz y un ranking que engancha. Para llegar de verdad a tu nivel.',
   wel_f1: 'Ruta de A1 a C1 con repaso inteligente de tus fallos', wel_f2: 'Habla y escribe: la IA te escucha y te corrige', wel_f3: 'Sube de Bronce a Diamante con LP y exámenes de ascenso',

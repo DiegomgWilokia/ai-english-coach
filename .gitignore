@@ -1,2 +1,4 @@
 node_modules/
 tests/out/
+# installers are published as GitHub Release assets, not committed
+downloads/
