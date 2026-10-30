@@ -1,11 +1,15 @@
 /* Offline shell. App files are cached so it opens with no connection;
  * calls to Google always hit the network. */
-const CACHE = 'aec-v5';
+const CACHE = 'aec-v6';
 const ASSETS = [
   './', './index.html', './app.css', './manifest.webmanifest',
   './favicon.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',
   './js/ui.js', './js/coach.js', './js/gemini.js', './js/ladder.js',
   './js/prompts.js', './js/store.js', './js/notify.js', './js/live.js', './js/i18n.js',
+  './js/syllabus.js', './js/check.js', './js/srs.js', './js/items.js', './js/gamify.js', './js/audio.js',
+  './js/path.js', './js/session.js', './js/dom.js',
+  './js/views/start.js', './js/views/path.js', './js/views/lesson.js', './js/views/practice.js',
+  './js/views/coach.js', './js/views/progress.js', './js/views/profile.js',
 ];
 
 self.addEventListener('install', e => {

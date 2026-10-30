@@ -2,7 +2,7 @@
   "name": "AI English Coach",
   "short_name": "English Coach",
   "description": "Tu profesor de inglés con IA: ejercicios, lecciones y conversación, en tu móvil.",
-  "start_url": "./index.html#/dashboard",
+  "start_url": "./index.html#/path",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

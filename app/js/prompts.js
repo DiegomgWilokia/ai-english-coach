@@ -504,3 +504,125 @@ Photo A shows: ${sceneA}.
 Photo B shows: ${sceneB}.
 Compare and contrast the two photos in ${variantOf(user)} English: describe what you see in each, what they have in common and how they differ, and say which situation you prefer and why.`;
 }
+
+// ---------------------------------------------------------------------------
+// Micro-lessons for the course path (syllabus.js decides the content focus)
+// ---------------------------------------------------------------------------
+const ADVANCED = new Set(['B1', 'B2', 'C1', 'C2']);
+
+/* How many items of each type a lesson gets. Round 2 trades recognition for production. */
+export function lessonRecipe(kind, level, round = 1) {
+  const adv = ADVANCED.has(level);
+  const r2 = round > 1;
+  switch (kind) {
+    case 'learn':
+      return { teach: 1, choice: r2 ? 1 : 3, cloze: 2, order: 2, translate: r2 ? 3 : 2, transform: adv ? (r2 ? 2 : 1) : 0, listen: 1 };
+    case 'words':
+      return { teach: 1, match: 1, choice: 2, cloze: r2 ? 3 : 2, listen: 2, dictation: 1, translate: r2 ? 2 : 1, wordform: adv ? 1 : 0 };
+    case 'listen':
+      return { listen: r2 ? 4 : 5, dictation: r2 ? 4 : 3, order: 1, choice: 1 };
+    case 'speak':
+      return { speak: r2 ? 4 : 5, speak_free: r2 ? 3 : 2, listen: 1, order: 1 };
+    case 'practice':
+      return adv
+        ? { transform: 3, wordform: 2, cloze: 2, choice: 1, translate: 2, listen: 1 }
+        : { cloze: 3, choice: 2, order: 2, translate: 2, listen: 1, dictation: 1 };
+    case 'check':
+      return adv
+        ? { choice: 2, cloze: 2, transform: 2, wordform: 1, translate: 2, order: 1, listen: 2, dictation: 1, speak: 1 }
+        : { choice: 3, cloze: 3, order: 2, translate: 2, listen: 2, dictation: 1, speak: 1 };
+    default:
+      return { choice: 3, cloze: 3, order: 2, translate: 2 };
+  }
+}
+
+const ITEM_SCHEMAS = {
+  teach: '{"type":"teach","title":"short title in Spanish","body":"the key rule in clear Spanish, max 60 words, contrast with Spanish when useful","examples":[{"en":"...","es":"..."}],"words":[{"en":"word","es":"traducción","example":"short English sentence"}]}  (words ONLY in a words lesson: 6-8 new words of the unit field; examples: 3)',
+  choice: '{"type":"choice","prompt":"English sentence with ___ OR a short question","options":["...","...","..."],"answer":"exact text of the right option","explain":"..."}',
+  cloze: '{"type":"cloze","prompt":"English sentence with ___ for 1-3 missing words","hint":"base verb or clue, optional","answer":"...","accept":["every other correct form, e.g. contracted"],"explain":"..."}',
+  order: '{"type":"order","es":"Spanish sentence","answer":"its natural English translation, 4-10 words","accept":["other correct word orders"],"distractors":["1-3 tempting wrong words"],"explain":"..."}',
+  translate: '{"type":"translate","es":"Spanish sentence (5-12 words)","answer":"best English translation","accept":["other correct translations"],"explain":"..."}',
+  transform: '{"type":"transform","prompt":"original English sentence","keyword":"WORD that must be used, unchanged","start":"second sentence with ___ for 2-5 words","answer":"the 2-5 missing words","accept":["..."],"explain":"..."}  (Cambridge key word transformation)',
+  wordform: '{"type":"wordform","prompt":"English sentence with ___","base":"BASE WORD in capitals","answer":"correct form","accept":["..."],"explain":"..."}  (Cambridge word formation)',
+  match: '{"type":"match","pairs":[{"en":"word","es":"traducción"}],"explain":""}  (5 pairs, words of this unit)',
+  listen: '{"type":"listen","audio":"1-2 natural English sentences that will be SPOKEN","prompt":"question in English about what is heard, or: What did you hear?","options":["...","...","..."],"answer":"exact text of the right option","explain":"..."}',
+  dictation: '{"type":"dictation","audio":"one English sentence (5-12 words) the student must type after hearing it","explain":"..."}',
+  speak: '{"type":"speak","say":"English sentence to read aloud (5-12 words) using the unit focus","es":"Spanish translation","explain":"the sound or stress to watch, in Spanish"}',
+  speak_free: '{"type":"speak_free","question":"short personal question in English that makes the student USE the unit focus","es":"Spanish translation of the question","model":"model answer in English, 2-3 sentences"}',
+};
+
+export function buildMicroLessonPrompt(user, unit, kind, round, level, recentTopics = []) {
+  const variant = variantOf(user);
+  const recipe = Object.entries(lessonRecipe(kind, level, round)).filter(([, n]) => n > 0);
+  const total = recipe.reduce((a, [t, n]) => a + (t === 'teach' ? 0 : n), 0);
+  const hasTeach = recipe.some(([t]) => t === 'teach');
+  return `[seed:${seed()}] You are a Cambridge-trained English teacher writing ONE micro-lesson for an app.
+The student is an adult Spanish speaker. Lessons must teach FAST: no filler, every item practises the focus.
+
+UNIT (CEFR ${level}): "${unit.title.en}"
+- Grammar focus: ${unit.grammar}
+- Vocabulary field: ${unit.vocab}
+- Can-do goal: ${unit.can.en}
+LESSON TYPE: ${kind} · ROUND ${round}${round > 1 ? ' (harder than round 1: longer sentences, more production, trickier distractors)' : ''}
+STUDENT: goal "${user.goal}", ${variant} English, known weaknesses: ${(user.weaknesses || []).join(', ') || 'none yet'}.
+${recentTopics.length ? `Do NOT reuse these recent sentences/contexts: ${recentTopics.join(' | ')}` : ''}
+
+Write exactly this mix (${total} exercises${hasTeach ? ' + 1 teach card first' : ''}), shuffled so types alternate:
+${recipe.map(([t, n]) => `${n} x ${t}`).join(', ')}
+
+Rules:
+- Level ${level} language only; sentences natural and useful, many tied to the student's goal.
+- Each exercise solvable in under 40 seconds.
+- "explain": Spanish, max 25 words, says WHY (mention the typical Spanish-speaker mistake when relevant).
+- "accept": list every other correct answer (contractions, synonyms, valid word orders). Missing alternatives make correct students fail.
+- Multiple choice: exactly one correct option, distractors = typical learner errors.
+- ${variant} spelling and vocabulary.
+- Add "topic" (2-4 words, English) to each exercise naming the grammar/vocab point it tests.
+
+Item shapes:
+${recipe.map(([t]) => `- ${ITEM_SCHEMAS[t]}`).join('\n')}
+
+Return ONLY JSON: {"title":"lesson title in Spanish (max 6 words)","items":[ ... ]}`;
+}
+
+export function buildOpenCheckPrompt(user, item, answer) {
+  const task = item.type === 'transform'
+    ? `Key word transformation. Original: "${item.prompt}". Must use the word "${item.keyword}" unchanged. Gapped sentence: "${item.start}".`
+    : item.type === 'cloze' ? `Fill the gap: "${item.prompt}"${item.hint ? ` (clue: ${item.hint})` : ''}.`
+    : `Translate into English: "${item.es}".`;
+  return `Judge one answer from a ${user.current_level} English learner (${variantOf(user)} English).
+Task: ${task}
+Reference answer: "${item.answer}". Other accepted: ${JSON.stringify(item.accept || [])}.
+Student answer: "${answer}".
+
+Correct = same meaning, grammatical, natural, and uses the target structure when the task requires it. Ignore capitals, final punctuation and one-letter typos.
+Return ONLY JSON: {"correct": true|false, "feedback": "Spanish, max 20 words: why it is right/wrong", "better": "the closest correct version of the student's answer"}`;
+}
+
+export function buildSpeechPrompt(user, item) {
+  if (item.type === 'speak_free') {
+    return `The audio is a ${user.current_level} English learner (Spanish speaker) answering out loud: "${item.question}".
+Transcribe exactly what they said, then assess it as a friendly but honest examiner (task achievement, grammar, vocabulary, pronunciation).
+If the audio is silent or not English, say so in the transcript and score 0.
+Return ONLY JSON: {"transcript":"...","score":0-100,"correct": true if score >= 60,"feedback":"Spanish, max 30 words: the ONE most useful correction","better":"a corrected, natural version of their answer in English"}`;
+  }
+  return `The audio is a Spanish-speaking English learner reading this sentence aloud: "${item.say}".
+Transcribe exactly what you hear (do not correct it), then compare it with the target sentence word by word.
+Score pronunciation and accuracy 0-100 (100 = clear and every word right; an accent is fine if intelligible). Silence or another sentence = 0.
+Return ONLY JSON: {"transcript":"...","score":0-100,"correct": true if score >= 70,"words":[{"w":"each word of the TARGET sentence","ok":true|false}],"feedback":"Spanish, max 25 words: the sound or word to fix, how to say it"}`;
+}
+
+export function buildCoachSystem(user, ctx = {}) {
+  return `Eres "Coach", el profesor particular de inglés de ${user.name}, un adulto hispanohablante.
+Nivel actual: ${user.current_level}${user.target_level ? `, meta: ${user.target_level}` : ''}. Objetivo: ${user.goal}. Inglés ${variantOf(user)}.
+Unidad que está estudiando: ${ctx.unit || 'ninguna'}. Puntos débiles: ${(user.weaknesses || []).join(', ') || 'aún ninguno'}.
+
+Cómo trabajas:
+- Respondes en español claro (en inglés si te escribe en inglés y su nivel es B1 o más), con ejemplos en inglés.
+- Breve: máximo ~120 palabras salvo que pida más. Nada de relleno.
+- Si escribe una frase en inglés con errores, la corriges primero (❌ → ✅) y explicas el porqué en una línea.
+- Si pide practicar, propones las frases o preguntas de una en una y corriges cada respuesta.
+- Explicas como un buen profesor: regla simple, contraste con el español, 2-3 ejemplos, truco para recordarlo.
+- Adaptas el vocabulario a su nivel. No inventes datos sobre exámenes oficiales; si no lo sabes, dilo.
+- Formato: markdown simple (**negrita**, listas con -). Sin tablas.`;
+}

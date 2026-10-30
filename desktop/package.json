@@ -1,0 +1,54 @@
+{
+  "name": "ai-english-coach-desktop",
+  "productName": "AI English Coach",
+  "version": "1.0.0",
+  "description": "AI English Coach for Windows (Electron shell around ../app)",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "node run.js",
+    "smoke": "node run.js --smoke",
+    "smoke:packaged": "node run.js --packaged --smoke",
+    "dist": "node build.js"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.aienglishcoach.desktop",
+    "productName": "AI English Coach",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "tts.js",
+      "app/**/*",
+      "!app/icon.png"
+    ],
+    "electronLanguages": [
+      "en-US",
+      "es-ES"
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "app/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AI English Coach",
+      "artifactName": "AI-English-Coach-Setup.${ext}",
+      "differentialPackage": false
+    }
+  }
+}

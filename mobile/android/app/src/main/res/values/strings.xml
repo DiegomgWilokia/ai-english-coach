@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AI English Coach</string>
+    <string name="title_activity_main">AI English Coach</string>
+    <string name="package_name">com.aienglishcoach.app</string>
+    <string name="custom_url_scheme">com.aienglishcoach.app</string>
+</resources>

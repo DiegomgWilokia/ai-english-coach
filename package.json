@@ -1,0 +1,13 @@
+{
+  "name": "ai-english-coach",
+  "private": true,
+  "type": "module",
+  "description": "AI English Coach: the web app lives in app/, the Windows build in desktop/, the Android build in mobile/.",
+  "scripts": {
+    "test": "node --test tests/unit.test.mjs",
+    "e2e": "node tests/e2e.mjs",
+    "verify": "node --test tests/unit.test.mjs && node tests/e2e.mjs",
+    "serve": "node tests/serve.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

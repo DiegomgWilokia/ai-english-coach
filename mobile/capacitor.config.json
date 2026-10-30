@@ -1,0 +1,19 @@
+{
+  "appId": "com.aienglishcoach.app",
+  "appName": "AI English Coach",
+  "webDir": "www",
+  "backgroundColor": "#0f1226",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#7C5CFF"
+    },
+    "SystemBars": {
+      "insetsHandling": "disable",
+      "style": "DARK"
+    }
+  }
+}

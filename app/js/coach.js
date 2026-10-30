@@ -6,6 +6,7 @@ import * as store from './store.js';
 import * as G from './gemini.js';
 import { lang } from './i18n.js';
 import { PHOTO_PAIRS, buildPhotoComparePrompt } from './prompts.js';
+import { dayKey } from './srs.js';
 
 export const LEVELS = store.LEVELS;
 
@@ -33,12 +34,12 @@ export function scoreCaps(recentScores) {
   };
 }
 
-export function updateLevelScore(currentLevel, currentScore, exerciseScore, recentScores) {
+export function updateLevelScore(currentLevel, currentScore, exerciseScore, recentScores, weight = 1) {
   const score = Math.max(0, Math.min(100, Number(exerciseScore) || 0));
   const caps = scoreCaps(recentScores && recentScores.length ? recentScores : [score]);
-  const delta = score >= 50
-    ? Math.round(((score - 50) / 50) * caps.gain_cap)
-    : -Math.round(((50 - score) / 50) * caps.loss_cap);
+  const delta = Math.round(weight * (score >= 50
+    ? ((score - 50) / 50) * caps.gain_cap
+    : -((50 - score) / 50) * caps.loss_cap));
 
   let newScore = currentScore + delta;
   let newLevel = currentLevel, up = false, down = false;
@@ -138,25 +139,14 @@ export function touchLogin() {
   if (!s.user) return;
   const today = new Date();
   const last = s.user.last_login ? new Date(s.user.last_login) : null;
-  if (last) {
-    const days = Math.floor((dateOnly(today) - dateOnly(last)) / 86400000);
-    if (days === 1) {
-      s.user.streak_days += 1;
-      s.user.days_without_login = 0;
-    } else if (days > 1) {
-      s.user.streak_days = 1;
-      s.user.days_without_login = days;
-    }
-  } else {
-    s.user.streak_days = 1;
-    s.user.days_without_login = 0;
-  }
+  // The streak itself lives in gamify.markActive: it counts days with practice, not app opens.
+  s.user.days_without_login = last ? Math.max(0, Math.floor((dateOnly(today) - dateOnly(last)) / 86400000)) : 0;
   s.user.last_login = today.toISOString();
   store.save();
 }
 
 const dateOnly = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-const todayKey = () => new Date().toISOString().slice(0, 10);
+const todayKey = () => dayKey();
 
 export function logStudy(minutes, completed) {
   const s = store.load();
@@ -270,7 +260,7 @@ export async function generatePhotoExercise() {
 export function applyPlacement(level) {
   const s = store.load();
   s.user.current_level = LEVELS.includes(level) ? level : 'B1';
-  s.user.level_score = 50;
+  s.user.level_score = 0;
   store.save();
   return s.user.current_level;
 }
@@ -289,18 +279,23 @@ export function recentEvaluableScores(limit = 20) {
       topic: (r.role || 'conversation').replace('Live Audio - ', ''),
       created_at: r.created_at, source: 'conversation',
     })),
+    ...(s.sessions || []).filter(r => r.score != null && r.type !== 'review').map(r => ({
+      score: Number(r.score), type: r.type, level: r.level, topic: r.title || r.kind,
+      created_at: r.created_at, source: 'session',
+    })),
   ];
   rows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   return rows.slice(0, limit);
 }
 
-export function applyLevelChange(exerciseScore) {
+/* weight < 1 for short activities: a 7-minute lesson moves LP less than an exam-style task. */
+export function applyLevelChange(exerciseScore, weight = 1) {
   const s = store.load();
   const recent = recentEvaluableScores(20).map(r => r.score);
   const { newLevel, newScore, up, down, meta } = updateLevelScore(
-    s.user.current_level, s.user.level_score, exerciseScore, recent.length ? recent : [exerciseScore]);
+    s.user.current_level, s.user.level_score, exerciseScore, recent.length ? recent : [exerciseScore], weight);
   if (up) {
-    // Reaching 100 unlocks the certification exam; the promotion happens when you PASS it.
+    // Reaching 100 unlocks the promotion exam; the promotion happens when you PASS it.
     s.user.level_score = 100;
     s.user.pending_exam = true;
     store.save();
@@ -314,16 +309,17 @@ export function applyLevelChange(exerciseScore) {
 
 export const CERT_PASS = 70;
 
-/* Pass (score >= CERT_PASS): promote + diploma. Fail: back to 85, exam stays available. */
+/* The promotion exam tests the NEXT level (current_level is the level you already have).
+ * Pass (score >= CERT_PASS): promote + diploma. Fail: back to 85, exam stays available. */
 export function resolveCertExam(score) {
   const s = store.load();
   const level = s.user.current_level;
   if (score >= CERT_PASS) {
     const to = nextLevel(level);
-    s.diplomas.push({ level, score: Math.round(score), date: new Date().toISOString(),
+    s.diplomas.push({ level, to, score: Math.round(score), date: new Date().toISOString(),
       name: `${s.user.name} ${s.user.last_name || ''}`.trim() });
     s.user.current_level = to;
-    s.user.level_score = 25;
+    s.user.level_score = 0;
     s.user.pending_exam = false;
     store.save();
     return { passed: true, from: level, to };
@@ -334,6 +330,7 @@ export function resolveCertExam(score) {
 }
 
 const TYPE_LABELS = {
+  lesson: 'Lessons',
   use_of_english: 'Use of English',
   reading: 'Reading',
   listening: 'Listening',

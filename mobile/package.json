@@ -1,0 +1,17 @@
+{
+  "name": "ai-english-coach-mobile",
+  "private": true,
+  "description": "Capacitor wrapper that builds the Android APK from ../app",
+  "scripts": {
+    "apk": "node scripts/build-apk.mjs"
+  },
+  "dependencies": {
+    "@capacitor-community/text-to-speech": "8.0.2",
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/local-notifications": "8.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

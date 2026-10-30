@@ -5,7 +5,7 @@
  * the ~5 MB cap. Move to IndexedDB if a user ever needs unlimited history.
  */
 const KEY = 'aec.state';
-const KEEP = { exercises: 60, conversations: 40, lessons: 40, vocab: 200, diplomas: 30 };
+const KEEP = { exercises: 60, conversations: 40, lessons: 40, vocab: 200, diplomas: 30, sessions: 400, review: 500, coach_chat: 60 };
 
 const EMPTY = {
   user: null,
@@ -16,7 +16,13 @@ const EMPTY = {
   vocab: [],            // [{word, meaning, example, times_failed, status, added_at}]
   diplomas: [],         // [{level, score, date, name}]
   study_logs: {},
-  settings: { reminder_hour: 19, reminders_on: false, lang: 'en' },
+  sessions: [],         // [{type, score, unit, kind, minutes, xp, created_at}] — one row per micro-lesson/review
+  review: [],           // spaced-repetition cards (srs.js)
+  path: {},             // path[unitId] = {learn: rounds, ..., check: true}
+  xp: { total: 0, days: {} },
+  quests: { day: '', list: [] },
+  coach_chat: [],       // [{role: 'user'|'model', text}]
+  settings: { reminder_hour: 19, reminders_on: false, lang: 'es', sound: true },
 };
 
 let state = null;
@@ -28,6 +34,7 @@ export function load() {
   state = { ...structuredClone(EMPTY), ...raw };
   // settings is nested: merge so new keys (lang) appear for existing installs
   state.settings = { ...EMPTY.settings, ...(raw.settings || {}) };
+  state.xp = { ...EMPTY.xp, ...(raw.xp || {}) };
   return state;
 }
 
@@ -86,7 +93,7 @@ export function createUser({ name, last_name, age, goal, preferred_english, curr
     target_months: target_months || null,
     study_days: study_days || [],
     pending_exam: false,
-    level_score: 50,
+    level_score: 0,
     streak_days: 0,
     last_login: null,
     days_without_login: 0,

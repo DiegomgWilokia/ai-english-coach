@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# copied from ../app at build time
+app/

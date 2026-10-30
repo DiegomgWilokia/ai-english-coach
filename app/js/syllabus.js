@@ -1,0 +1,132 @@
+/* The course map. Units follow the usual CEFR progression of Cambridge English
+ * exams (A2 Key, B1 Preliminary, B2 First) and the English Grammar Profile:
+ * each unit = one grammar focus + one vocabulary field + one "can do" goal.
+ * Gemini writes the exercises; this file decides WHAT gets taught and in what order.
+ */
+const u = (id, icon, es, en, canEs, canEn, grammar, vocab) =>
+  ({ id, icon, title: { es, en }, can: { es: canEs, en: canEn }, grammar, vocab });
+
+export const SYLLABUS = {
+  A1: [
+    u('A1-1', '👋', 'Hola, soy yo', 'Hello, it’s me', 'Presentarte y saludar', 'Introduce yourself',
+      'verb to be (am/is/are), subject pronouns, possessive adjectives', 'greetings, countries, nationalities, numbers 1-100'),
+    u('A1-2', '👨‍👩‍👧', 'Mi gente y mis cosas', 'My people, my things', 'Hablar de tu familia y tus cosas', 'Talk about family and things',
+      'have got / has got, this/that/these/those, regular and irregular plurals', 'family, everyday objects, colours'),
+    u('A1-3', '⏰', 'Mi día a día', 'My daily life', 'Describir tu rutina', 'Describe your routine',
+      'present simple (affirmative, negative, questions), adverbs of frequency', 'daily routines, time, days of the week'),
+    u('A1-4', '🛒', 'Comida y compras', 'Food & shopping', 'Pedir y comprar', 'Order and buy things',
+      'countable/uncountable nouns, some/any, how much/how many, can for requests', 'food, drinks, shops, prices'),
+    u('A1-5', '🏙️', 'Mi ciudad', 'My town', 'Decir dónde está algo y dar direcciones', 'Say where things are and give directions',
+      'there is/there are, prepositions of place, imperatives', 'places in town, rooms and furniture'),
+    u('A1-6', '📸', 'Justo ahora', 'Right now', 'Hablar de lo que está pasando', 'Talk about what is happening now',
+      'present continuous vs present simple, like/love/hate + -ing', 'free-time activities, clothes, weather'),
+  ],
+  A2: [
+    u('A2-1', '🕰️', 'El finde pasado', 'Last weekend', 'Contar lo que hiciste', 'Say what you did',
+      'past simple (regular and irregular verbs), was/were, ago, last, yesterday', 'weekend activities, holidays'),
+    u('A2-2', '📖', 'Pasó algo', 'Something happened', 'Narrar una historia corta', 'Tell a short story',
+      'past continuous vs past simple, when/while', 'events, small accidents, feelings'),
+    u('A2-3', '📅', 'Planes', 'Plans', 'Hablar de planes e invitar a alguien', 'Talk about plans and invite people',
+      'be going to, present continuous for arrangements, would you like to', 'plans, invitations, celebrations'),
+    u('A2-4', '⚖️', 'Comparar', 'Comparing', 'Comparar opciones y elegir', 'Compare options and choose',
+      'comparatives and superlatives, (not) as ... as', 'adjectives, cities, products'),
+    u('A2-5', '🌍', '¿Alguna vez...?', 'Have you ever...?', 'Hablar de experiencias', 'Talk about experiences',
+      'present perfect with ever/never, been vs gone', 'travel, experiences, transport'),
+    u('A2-6', '📋', 'Normas y consejos', 'Rules & advice', 'Dar consejos y explicar normas', 'Give advice and explain rules',
+      'must/mustn’t, have to/don’t have to, should/shouldn’t', 'rules, health, the body'),
+    u('A2-7', '🔮', 'El futuro', 'The future', 'Hacer predicciones y hablar de condiciones', 'Make predictions and talk about conditions',
+      'will/won’t, might, first conditional', 'technology, weather, the environment'),
+    u('A2-8', '💶', 'Cantidades', 'How much?', 'Hablar de cantidades y dinero', 'Talk about quantities and money',
+      'much/many/a lot of/a few/a little, too/enough', 'money, shopping, food quantities'),
+    u('A2-9', '🧑‍🤝‍🧑', 'Describir personas', 'Describing people', 'Describir a una persona', 'Describe a person',
+      'defining relative clauses (who/which/that), look/look like/be like', 'appearance, personality'),
+    u('A2-10', '🎯', 'Me gusta, quiero', 'I want to, I enjoy', 'Hablar de gustos y metas', 'Talk about likes and goals',
+      'verb + -ing vs verb + to-infinitive, basic phrasal verbs (get up, turn on, look for)', 'work, hobbies, goals'),
+  ],
+  B1: [
+    u('B1-1', '🧭', 'Mi trayectoria', 'My story so far', 'Contar tu trayectoria', 'Talk about your life so far',
+      'present perfect vs past simple, for/since, just/already/yet', 'life events, work, studies'),
+    u('B1-2', '⏳', 'Llevo un tiempo...', 'I’ve been doing...', 'Hablar de lo que llevas tiempo haciendo', 'Talk about ongoing activities',
+      'present perfect continuous vs present perfect simple', 'hobbies, projects, routines'),
+    u('B1-3', '📰', 'Contar con detalle', 'Telling it in detail', 'Narrar con detalle', 'Narrate in detail',
+      'past perfect, narrative tenses together', 'news, stories, travel problems'),
+    u('B1-4', '🧒', 'Antes solía...', 'I used to...', 'Hablar de hábitos pasados y cambios', 'Talk about past habits and change',
+      'used to, would for past habits, be/get used to', 'childhood, lifestyle changes'),
+    u('B1-5', '🗓️', 'Futuros', 'Future forms', 'Elegir el futuro adecuado', 'Choose the right future form',
+      'will vs going to vs present continuous vs present simple (timetables), future continuous', 'plans, travel, careers'),
+    u('B1-6', '🤔', '¿Y si...?', 'What if...?', 'Hablar de situaciones hipotéticas', 'Talk about hypothetical situations',
+      'zero, first and second conditional, unless, in case', 'dilemmas, money, lifestyle'),
+    u('B1-7', '🏭', 'La pasiva', 'The passive', 'Describir procesos y productos', 'Describe processes and products',
+      'present and past simple passive, by + agent', 'inventions, products, processes'),
+    u('B1-8', '💬', 'Dijo que...', 'She said that...', 'Contar lo que otra persona dijo', 'Report what someone said',
+      'reported speech (statements and questions), say vs tell', 'messages, conversations, news'),
+    u('B1-9', '🕵️', 'Deducciones', 'Making deductions', 'Hacer deducciones', 'Make deductions',
+      'modals of deduction in the present (must, might, could, can’t)', 'mysteries, guesses, everyday problems'),
+    u('B1-10', '🔗', 'Información extra', 'Adding information', 'Dar información extra en una frase', 'Add extra information in one sentence',
+      'defining and non-defining relative clauses, whose, where, when', 'places, people, objects'),
+    u('B1-11', '🗣️', 'Sonar natural', 'Sounding natural', 'Usar phrasal verbs y colocaciones comunes', 'Use common phrasal verbs and collocations',
+      'common phrasal verbs (separable/inseparable), make vs do, get', 'work, relationships, everyday life'),
+    u('B1-12', '✉️', 'Opinar y escribir', 'Opinions & emails', 'Dar tu opinión y escribir emails', 'Give opinions and write emails',
+      'linkers (although, however, despite, so that, in order to), opinion phrases', 'debates, emails, social media'),
+  ],
+  B2: [
+    u('B2-1', '🎬', 'Historias con ritmo', 'Storytelling', 'Contar historias con fluidez', 'Tell stories fluently',
+      'past perfect continuous, all narrative tenses', 'experiences, storytelling, emotions'),
+    u('B2-2', '🚀', 'El futuro preciso', 'The precise future', 'Hablar del futuro con precisión', 'Talk about the future precisely',
+      'future perfect, future continuous, be about to, be likely to', 'careers, goals, technology'),
+    u('B2-3', '😔', 'Ojalá...', 'I wish...', 'Lamentar y especular sobre el pasado', 'Express regret and speculate about the past',
+      'third and mixed conditionals, wish / if only', 'regrets, decisions, life choices'),
+    u('B2-4', '🔍', 'Debió de ser...', 'It must have been...', 'Deducir y criticar el pasado', 'Make deductions and criticise the past',
+      'past modals (must have, might have, can’t have, should have, needn’t have)', 'mistakes, mysteries, accidents'),
+    u('B2-5', '🛠️', 'Pasiva avanzada', 'Advanced passive', 'Hablar de servicios y noticias', 'Talk about services and news',
+      'passive with modals and perfect tenses, have/get something done, it is said that / is thought to', 'services, crime, news'),
+    u('B2-6', '📣', 'Verbos para reportar', 'Reporting verbs', 'Reportar con precisión', 'Report precisely',
+      'reporting verbs and their patterns (suggest, warn, admit, deny, refuse, persuade)', 'negotiations, arguments, news'),
+    u('B2-7', '🧩', 'Patrones verbales', 'Verb patterns', 'Usar -ing e infinitivo sin dudar', 'Use -ing and infinitive confidently',
+      'gerunds vs infinitives with a change of meaning (remember, stop, try, regret, mean)', 'habits, memories, decisions'),
+    u('B2-8', '✍️', 'Frases complejas', 'Complex sentences', 'Escribir frases complejas y elegantes', 'Write complex, elegant sentences',
+      'reduced relative clauses, participle clauses', 'descriptions, formal writing'),
+    u('B2-9', '🔤', 'Formación de palabras', 'Word formation', 'Formar palabras (Use of English Part 3)', 'Build words (Use of English Part 3)',
+      'prefixes and suffixes: nouns, adjectives, adverbs, negative prefixes', 'abstract nouns, work, society'),
+    u('B2-10', '⚔️', 'Argumentar', 'Arguing a point', 'Escribir ensayos argumentativos', 'Write argumentative essays',
+      'contrast and condition linkers (whereas, nevertheless, in spite of, provided that, as long as)', 'education, environment, technology'),
+    u('B2-11', '💥', 'Dar énfasis', 'Emphasis', 'Dar énfasis y persuadir', 'Add emphasis and persuade',
+      'cleft sentences (What I need is...), not only... but also, inversion after negative adverbials (intro)', 'persuasion, presentations'),
+    u('B2-12', '🗽', 'Como un nativo', 'Like a native', 'Usar expresiones idiomáticas', 'Use idiomatic language',
+      'B2 phrasal verbs, idioms and collocations', 'work, emotions, relationships'),
+  ],
+  C1: [
+    u('C1-1', '🎭', 'Inversión', 'Inversion', 'Usar inversión con naturalidad', 'Use inversion naturally',
+      'inversion (never have I, no sooner... than, rarely, had I known)', 'formal speech, storytelling'),
+    u('C1-2', '🏛️', 'Registro formal', 'Formal register', 'Cambiar de registro', 'Switch register',
+      'nominalisation, formal vs informal structures, subjunctive (I suggest he be)', 'academic and business English'),
+    u('C1-3', '🌫️', 'Matizar', 'Hedging', 'Matizar opiniones', 'Hedge and soften opinions',
+      'hedging language (tend to, it would appear that, arguably), distancing passive', 'science, debate, reports'),
+    u('C1-4', '🧵', 'Cohesión', 'Cohesion', 'Hilar un discurso largo', 'Link long discourse',
+      'discourse markers, ellipsis and substitution', 'presentations, essays'),
+    u('C1-5', '🎲', 'Modales avanzados', 'Advanced modals', 'Expresar matices de probabilidad', 'Express shades of probability',
+      'advanced modal meanings (be bound to, may well, could hardly), modal perfects', 'risk, predictions'),
+    u('C1-6', '🦉', 'Idioms C1', 'C1 idioms', 'Entender y usar idioms avanzados', 'Understand and use advanced idioms',
+      'idioms, fixed expressions, advanced collocations', 'work, money, relationships'),
+    u('C1-7', '🎤', 'Persuadir', 'Persuasion', 'Persuadir en una reunión o charla', 'Persuade in meetings and talks',
+      'rhetorical devices, emphatic structures, conditionals without if', 'business, negotiation'),
+    u('C1-8', '📚', 'Leer entre líneas', 'Reading between the lines', 'Captar tono e intención', 'Catch tone and intention',
+      'attitude and tone language, irony, implied meaning', 'literature, journalism'),
+  ],
+};
+SYLLABUS.C2 = SYLLABUS.C1.map(x => ({ ...x, id: x.id.replace('C1', 'C2') }));
+
+/* Six stops per unit. The checkpoint can be taken any time to skip ahead. */
+export const NODES = [
+  { kind: 'learn', icon: '📘' },
+  { kind: 'words', icon: '🔤' },
+  { kind: 'listen', icon: '🎧' },
+  { kind: 'speak', icon: '🎙️' },
+  { kind: 'practice', icon: '⚡' },
+  { kind: 'check', icon: '🏆' },
+];
+export const ROUNDS = 2;          // round 2 = same focus, harder and more production
+
+export const unitsOf = level => SYLLABUS[level] || [];
+export const findUnit = id => Object.values(SYLLABUS).flat().find(x => x.id === id) || null;
+export const levelOfUnit = id => String(id).split('-')[0];

@@ -76,6 +76,21 @@ function partsText(data) {
   return parts.map(p => p.text || '').join('').trim();
 }
 
+/* Generic call: contents/system/json/temperature, on the best model in quota. */
+async function callRaw({ contents, system = P.SYSTEM_PERSONALITY, json = true, temperature, timeoutMs }) {
+  return L.call('text', async model => {
+    const data = await generateContent(model, {
+      contents,
+      systemInstruction: { parts: [{ text: system }] },
+      generationConfig: {
+        temperature: temperature ?? (json ? 0.6 : 0.8),
+        ...(json ? { responseMimeType: 'application/json' } : {}),
+      },
+    }, timeoutMs);
+    return partsText(data);
+  });
+}
+
 /* Call Gemini on the best model still in quota. Throws QuotaExhausted when none is. */
 export async function callModel(prompt, jsonMode = true) {
   return L.call('text', async model => {
@@ -270,7 +285,7 @@ export async function generateImage(scene) {
 const BRITISH_PAIR = ['Aoede', 'Charon'];
 const AMERICAN_PAIR = ['Puck', 'Kore'];
 
-function pcmToWavBlob(pcm, sampleRate = 24000) {
+export function pcmToWavBlob(pcm, sampleRate = 24000) {
   const header = new ArrayBuffer(44);
   const v = new DataView(header);
   const write = (off, s) => [...s].forEach((c, i) => v.setUint8(off + i, c.charCodeAt(0)));
@@ -322,6 +337,76 @@ export async function synthesizeDialogue(dialogue, preferredEnglish = 'british')
     if (!b64) throw new Error('La voz no devolvió audio.');
     return URL.createObjectURL(pcmToWavBlob(b64ToBytes(b64)));
   });
+}
+
+/* One English sentence as speech (fallback when the device has no English voice). */
+export async function synthesizeSpeech(text, preferredEnglish = 'british') {
+  const voice = preferredEnglish === 'american' ? 'Kore' : 'Aoede';
+  return L.call('tts', async model => {
+    const data = await generateContent(model, {
+      contents: [{ role: 'user', parts: [{ text: `Say clearly, at a natural teaching pace: ${text}` }] }],
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+      },
+    }, 60000);
+    const b64 = data?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+    if (!b64) throw new Error('La voz no devolvió audio.');
+    return URL.createObjectURL(pcmToWavBlob(b64ToBytes(b64)));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Course path: micro-lessons, open-answer checks, speech checks, coach chat
+// ---------------------------------------------------------------------------
+export async function generateMicroLesson(user, unit, kind, round, level, recentTopics) {
+  const raw = await callRaw({
+    contents: [{ role: 'user', parts: [{ text: P.buildMicroLessonPrompt(user, unit, kind, round, level, recentTopics) }] }],
+    temperature: 0.85,
+    timeoutMs: 120000,
+  });
+  const data = safeJson(raw, null);
+  const items = Array.isArray(data) ? data : data?.items;
+  if (!Array.isArray(items)) throw new Error('Gemini devolvió una lección que no se pudo leer. Vuelve a intentarlo.');
+  return { title: typeof data?.title === 'string' ? data.title.slice(0, 80) : '', items };
+}
+
+export async function checkOpenAnswer(user, item, answer) {
+  const raw = await callRaw({
+    contents: [{ role: 'user', parts: [{ text: P.buildOpenCheckPrompt(user, item, answer) }] }],
+    temperature: 0.1,
+    timeoutMs: 30000,
+  });
+  const data = safeJson(raw, null);
+  if (!data || typeof data.correct !== 'boolean') throw new Error('No se pudo comprobar la respuesta.');
+  return { correct: data.correct, feedback: String(data.feedback || ''), better: String(data.better || '') };
+}
+
+export async function checkSpeech(user, item, wavBase64) {
+  const raw = await callRaw({
+    contents: [{ role: 'user', parts: [
+      { inlineData: { mimeType: 'audio/wav', data: wavBase64 } },
+      { text: P.buildSpeechPrompt(user, item) },
+    ] }],
+    temperature: 0.2,
+    timeoutMs: 60000,
+  });
+  const data = safeJson(raw, null);
+  if (!data || typeof data.transcript !== 'string') throw new Error('No se pudo analizar el audio. Vuelve a intentarlo.');
+  const score = Math.max(0, Math.min(100, Number(data.score) || 0));
+  return {
+    transcript: data.transcript, score,
+    correct: item.type === 'speak_free' ? score >= 60 : score >= 70,
+    feedback: String(data.feedback || ''), better: String(data.better || ''),
+    words: Array.isArray(data.words) ? data.words.filter(w => w && typeof w.w === 'string') : [],
+  };
+}
+
+/* history: [{role:'user'|'model', text}] — the coach keeps the thread. */
+export async function coachReply(user, history, ctx) {
+  const contents = history.slice(-20).map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] }));
+  const text = await callRaw({ contents, system: P.buildCoachSystem(user, ctx), json: false, temperature: 0.7, timeoutMs: 60000 });
+  return text.trim() || 'Perdona, no te he entendido. ¿Me lo repites?';
 }
 
 export { L as ladder };

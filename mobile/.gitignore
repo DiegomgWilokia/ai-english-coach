@@ -1,0 +1,7 @@
+node_modules/
+# Copied from ../app by `npm run apk`; app/ is the single source
+www/
+# Release keys never go in this repo (it is public). They live in %LOCALAPPDATA%\AIEnglishCoach
+*.jks
+*.keystore
+keystore.properties
